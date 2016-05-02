@@ -81,6 +81,33 @@ def encrypt(img, message, key, output_filename):
         x += 1
         y += 1
 
+    num_bits_to_encode = 3 * 8
+    end_sequence = chr(key[2]) + chr(key[3]) + chr(key[4])
+    c = 0
+    count = 0
+
+    # Now we right the end sequence.
+    for i in range(num_bits_to_encode):
+        r, g, b = _get_pixel(x, y, pixels)
+        bit = get_bit(end_sequence, i)
+        # ODD is a 0
+        # Even is a 1
+        if bit == 0:
+            # Is the red value even? If it is then we need to make it odd
+            # so that it represents a 0. If it's odd then we do nothing.
+            if r % 2 == 0:
+                r += 1
+        else:
+            # In this case the bit is a 1 so we must make the value even.
+            if r % 2 == 1:
+                if r == 255:
+                    r -= 1
+                else:
+                    r += 1
+        _set_pixel(x, y, pixels, r, g, b)
+        x += 1
+        y += 1
+
     # Now we save the file.
     iw = png.Writer(width=width, height=height, planes=3)
     f = open(output_filename, 'wb')
@@ -104,6 +131,7 @@ def decrypt(img, key):
     message = ''
     count = 0
     c = 0
+    end_sequence = chr(key[2]) + chr(key[3]) + chr(key[4])
 
     for i in range(num_bits_to_encode):
         r, g, b = _get_pixel(x, y, pixels)
@@ -121,8 +149,12 @@ def decrypt(img, key):
             message += chr(reverse_bits(c))
             c = 0
 
+            if message[-3:] == end_sequence:
+                return message
+
         x += 1
         y += 1
+
     return message
 
 
@@ -158,12 +190,12 @@ def main():
             parser.print_help()
             sys.exit(_exit_code)
         print('Message is \"{}\"'.format(args.message))
-        encrypt(args.image, args.message, [502, 402], args.out)
+        encrypt(args.image, args.message, [502, 402, 12, 12, 13], args.out)
     elif args.decrypt and not args.encrypt:
         if not args.image:
             parser.print_help()
             sys.exit(_exit_code)
-        print('{}'.format(decrypt(args.image, [502, 402])))
+        print('{}'.format(decrypt(args.image, [502, 402, 12, 12, 13])))
     else:
         parser.print_help()
 
